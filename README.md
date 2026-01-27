@@ -1,5 +1,7 @@
 # 媒体控制脚本配置说明
 
+[English document](README-EN.md)
+
 ## 1. 创建控制脚本
 
 **位置：**
