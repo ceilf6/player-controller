@@ -4,7 +4,6 @@
 
 **位置：**
 
-```bash
 ~/Library/Scripts/EVPlayer2/
 
 脚本列表：
