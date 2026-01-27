@@ -9,11 +9,35 @@ function controlEVPlayer(action)
         return
     end
 
-    -- Activate EVPlayer2 and send space key
-    evplayer:activate()
-    hs.timer.usleep(200000)  -- 200ms
-    hs.eventtap.keyStroke({}, "space")
-    print("  ✓ " .. action .. " - space key sent")
+    if action == "PlayPause" then
+        -- Activate and send space key for play/pause
+        evplayer:activate()
+        hs.timer.usleep(200000)  -- 200ms
+        hs.eventtap.keyStroke({}, "space")
+        print("  ✓ PlayPause - space key sent")
+    elseif action == "Next" then
+        -- Click the >> button
+        local script = [[
+            tell application "System Events"
+                tell process "EVPlayer2"
+                    click button ">>" of window 1
+                end tell
+            end tell
+        ]]
+        hs.osascript.applescript(script)
+        print("  ✓ Next - clicked >> button")
+    elseif action == "Previous" then
+        -- Click the << button
+        local script = [[
+            tell application "System Events"
+                tell process "EVPlayer2"
+                    click button "<<" of window 1
+                end tell
+            end tell
+        ]]
+        hs.osascript.applescript(script)
+        print("  ✓ Previous - clicked << button")
+    end
 end
 
 -- Media key event tap
