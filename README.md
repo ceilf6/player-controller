@@ -11,7 +11,7 @@
 - Next.scpt — 下一个
 - Previous.scpt — 上一个
 
-⸻
+---
 
 ## 2. 创建 Hammerspoon 配置
 
@@ -27,7 +27,7 @@ F8	播放 / 暂停
 F9	下一个
 
 
-⸻
+---
 
 下一步操作
 
@@ -42,7 +42,7 @@ brew install --cask hammerspoon
 https://github.com/Hammerspoon/hammerspoon/releases/latest
 	2.	下载并将 Hammerspoon 拖入 /Applications/
 
-⸻
+---
 
 启动 Hammerspoon
 	1.	打开 Hammerspoon 应用
@@ -50,7 +50,7 @@ https://github.com/Hammerspoon/hammerspoon/releases/latest
 系统设置 → 隐私与安全性 → 辅助功能
 	3.	点击菜单栏 Hammerspoon 图标 → Reload Config
 
-⸻
+---
 
 替代方案
 
