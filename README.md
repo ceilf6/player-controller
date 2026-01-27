@@ -58,3 +58,12 @@ https://github.com/Hammerspoon/hammerspoon/releases/latest
 - BetterTouchTool（付费，功能强大）
 - Karabiner-Elements（免费，但配置较复杂）
 
+# 破译防截图脚本
+有些播放器在播放视频时会通过硬件层渲染阻止截图工具捕获，但是这些播放器有些会将内容缓存为本地 .ts 文件，本工具通过以下步骤完成截图：  
+
+1. 使用 AppleScript 从播放器窗口读取：
+	当前播放时间（如 00:06:08）
+	窗口标题（用于匹配缓存文件）
+2. 在指定的下载 / 缓存目录中定位对应的 .ts 视频文件
+3. 使用 ffmpeg 从该时间点截取当前帧
+4. 通过 Hammerspoon 绑定全局快捷键，一键触发
