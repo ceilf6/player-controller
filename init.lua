@@ -102,17 +102,17 @@ function controlNeteaseMusic(action)
 end
 
 -- Control the last active media player
+-- 默认控制 EVPlayer2，只有网易云音乐最后激活且正在运行时才控制它
 function controlMediaPlayer(action)
     print("Action: " .. action .. " | Last player: " .. (lastActiveMediaPlayer or "none"))
 
-    if lastActiveMediaPlayer == "EVPlayer2" then
-        return controlEVPlayer(action)
-    elseif lastActiveMediaPlayer == "网易云音乐" then
+    -- 如果网易云音乐是最后激活的且正在运行，控制它
+    if lastActiveMediaPlayer == "网易云音乐" and hs.application.get("网易云音乐") then
         return controlNeteaseMusic(action)
-    else
-        print("  ✗ No media player was recently used")
-        return false
     end
+
+    -- 否则默认控制 EVPlayer2
+    return controlEVPlayer(action)
 end
 
 -- Media key event tap
