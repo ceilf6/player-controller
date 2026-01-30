@@ -1,42 +1,102 @@
--- EVPlayer2 Media Keys Support
--- This script allows you to control EVPlayer2 with media keys
+-- Smart Media Keys Support
+-- Controls the last active media player (EVPlayer2 or NeteaseMusic)
 
+-- Track the last active media player
+local lastActiveMediaPlayer = nil
+
+-- List of media player apps to track
+local mediaPlayers = {
+    "EVPlayer2",
+    "NeteaseMusic",  -- 网易云音乐
+}
+
+-- Application watcher to track media player activation
+local appWatcher = hs.application.watcher.new(function(appName, eventType, app)
+    if eventType == hs.application.watcher.activated then
+        for _, player in ipairs(mediaPlayers) do
+            if appName == player then
+                lastActiveMediaPlayer = appName
+                print("Media player activated: " .. appName)
+                break
+            end
+        end
+    end
+end)
+appWatcher:start()
+
+-- Control EVPlayer2
 function controlEVPlayer(action)
-    -- Get EVPlayer2 app
     local evplayer = hs.application.get("EVPlayer2")
     if not evplayer then
         print("  ✗ EVPlayer2 not running")
-        return
+        return false
     end
 
     if action == "PlayPause" then
-        -- Activate and send space key for play/pause
         evplayer:activate()
-        hs.timer.usleep(200000)  -- 200ms
+        hs.timer.usleep(200000)
         hs.eventtap.keyStroke({}, "space")
-        print("  ✓ PlayPause - space key sent")
+        print("  ✓ EVPlayer2 PlayPause")
     elseif action == "Next" then
-        -- Click the >> button
-        local script = [[
+        hs.osascript.applescript([[
             tell application "System Events"
                 tell process "EVPlayer2"
                     click button ">>" of window 1
                 end tell
             end tell
-        ]]
-        hs.osascript.applescript(script)
-        print("  ✓ Next - clicked >> button")
+        ]])
+        print("  ✓ EVPlayer2 Next")
     elseif action == "Previous" then
-        -- Click the << button
-        local script = [[
+        hs.osascript.applescript([[
             tell application "System Events"
                 tell process "EVPlayer2"
                     click button "<<" of window 1
                 end tell
             end tell
-        ]]
-        hs.osascript.applescript(script)
-        print("  ✓ Previous - clicked << button")
+        ]])
+        print("  ✓ EVPlayer2 Previous")
+    end
+    return true
+end
+
+-- Control NeteaseMusic
+function controlNeteaseMusic(action)
+    local netease = hs.application.get("NeteaseMusic")
+    if not netease then
+        print("  ✗ NeteaseMusic not running")
+        return false
+    end
+
+    if action == "PlayPause" then
+        netease:activate()
+        hs.timer.usleep(100000)
+        hs.eventtap.keyStroke({}, "space")
+        print("  ✓ NeteaseMusic PlayPause")
+    elseif action == "Next" then
+        netease:activate()
+        hs.timer.usleep(100000)
+        hs.eventtap.keyStroke({"cmd"}, "right")
+        print("  ✓ NeteaseMusic Next")
+    elseif action == "Previous" then
+        netease:activate()
+        hs.timer.usleep(100000)
+        hs.eventtap.keyStroke({"cmd"}, "left")
+        print("  ✓ NeteaseMusic Previous")
+    end
+    return true
+end
+
+-- Control the last active media player
+function controlMediaPlayer(action)
+    print("Action: " .. action .. " | Last player: " .. (lastActiveMediaPlayer or "none"))
+
+    if lastActiveMediaPlayer == "EVPlayer2" then
+        return controlEVPlayer(action)
+    elseif lastActiveMediaPlayer == "NeteaseMusic" then
+        return controlNeteaseMusic(action)
+    else
+        print("  ✗ No media player was recently used")
+        return false
     end
 end
 
@@ -51,24 +111,16 @@ function createMediaKeyTap()
             return false
         end
 
-        local evplayer = hs.application.get("EVPlayer2")
-        if not evplayer then
-            return false
-        end
-
         local key = data.key
 
         if key == "PLAY" or key == "PAUSE" or key == "PLAY_PAUSE" then
-            print("Play/Pause")
-            controlEVPlayer("PlayPause")
+            controlMediaPlayer("PlayPause")
             return true
         elseif key == "NEXT" or key == "FAST" then
-            print("Next")
-            controlEVPlayer("Next")
+            controlMediaPlayer("Next")
             return true
         elseif key == "PREVIOUS" or key == "REWIND" then
-            print("Previous")
-            controlEVPlayer("Previous")
+            controlMediaPlayer("Previous")
             return true
         end
 
@@ -96,19 +148,8 @@ mediaKeyTap:start()
 local watchdogTimer = hs.timer.doEvery(5, ensureMediaKeyTapRunning)
 
 -- F-key bindings as backup
-hs.hotkey.bind({}, "f7", function()
-    print("F7 - Previous")
-    controlEVPlayer("Previous")
-end)
+hs.hotkey.bind({}, "f7", function() controlMediaPlayer("Previous") end)
+hs.hotkey.bind({}, "f8", function() controlMediaPlayer("PlayPause") end)
+hs.hotkey.bind({}, "f9", function() controlMediaPlayer("Next") end)
 
-hs.hotkey.bind({}, "f8", function()
-    print("F8 - Play/Pause")
-    controlEVPlayer("PlayPause")
-end)
-
-hs.hotkey.bind({}, "f9", function()
-    print("F9 - Next")
-    controlEVPlayer("Next")
-end)
-
-hs.alert.show("EVPlayer2 media keys loaded!")
+hs.alert.show("Smart media keys loaded!")
