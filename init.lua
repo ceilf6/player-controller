@@ -7,12 +7,13 @@ local lastActiveMediaPlayer = nil
 -- List of media player apps to track
 local mediaPlayers = {
     "EVPlayer2",
-    "NeteaseMusic",  -- 网易云音乐
+    "网易云音乐",  -- NeteaseMusic
 }
 
 -- Application watcher to track media player activation
 local appWatcher = hs.application.watcher.new(function(appName, eventType, app)
     if eventType == hs.application.watcher.activated then
+        print("App activated: [" .. (appName or "nil") .. "]")
         for _, player in ipairs(mediaPlayers) do
             if appName == player then
                 lastActiveMediaPlayer = appName
@@ -61,27 +62,41 @@ end
 
 -- Control NeteaseMusic
 function controlNeteaseMusic(action)
-    local netease = hs.application.get("NeteaseMusic")
+    local netease = hs.application.get("网易云音乐")
     if not netease then
-        print("  ✗ NeteaseMusic not running")
+        print("  ✗ 网易云音乐 not running")
         return false
     end
 
     if action == "PlayPause" then
-        netease:activate()
-        hs.timer.usleep(100000)
-        hs.eventtap.keyStroke({}, "space")
-        print("  ✓ NeteaseMusic PlayPause")
+        -- 菜单项名称会变化：播放中显示"暂停"，暂停时显示"播放"
+        local ok, result = hs.osascript.applescript([[
+            tell application "System Events"
+                tell process "NeteaseMusic"
+                    set menuItem to menu item 1 of menu 1 of menu bar item "控制" of menu bar 1
+                    click menuItem
+                end tell
+            end tell
+        ]])
+        print("  ✓ 网易云音乐 PlayPause")
     elseif action == "Next" then
-        netease:activate()
-        hs.timer.usleep(100000)
-        hs.eventtap.keyStroke({"cmd"}, "right")
-        print("  ✓ NeteaseMusic Next")
+        hs.osascript.applescript([[
+            tell application "System Events"
+                tell process "NeteaseMusic"
+                    click menu item "下一个" of menu 1 of menu bar item "控制" of menu bar 1
+                end tell
+            end tell
+        ]])
+        print("  ✓ 网易云音乐 Next")
     elseif action == "Previous" then
-        netease:activate()
-        hs.timer.usleep(100000)
-        hs.eventtap.keyStroke({"cmd"}, "left")
-        print("  ✓ NeteaseMusic Previous")
+        hs.osascript.applescript([[
+            tell application "System Events"
+                tell process "NeteaseMusic"
+                    click menu item "上一个" of menu 1 of menu bar item "控制" of menu bar 1
+                end tell
+            end tell
+        ]])
+        print("  ✓ 网易云音乐 Previous")
     end
     return true
 end
@@ -92,7 +107,7 @@ function controlMediaPlayer(action)
 
     if lastActiveMediaPlayer == "EVPlayer2" then
         return controlEVPlayer(action)
-    elseif lastActiveMediaPlayer == "NeteaseMusic" then
+    elseif lastActiveMediaPlayer == "网易云音乐" then
         return controlNeteaseMusic(action)
     else
         print("  ✗ No media player was recently used")
