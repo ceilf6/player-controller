@@ -122,7 +122,9 @@ function createMediaKeyTap()
     return hs.eventtap.new({hs.eventtap.event.types.systemDefined}, function(event)
         local data = event:systemKey()
 
-        if not data or not data.down then
+        -- data.down == false 表示松键，跳过；
+        -- data.down == true 或 nil（内置键盘部分系统版本不设置此字段）均视为按下
+        if not data or data.down == false then
             return false
         end
 
