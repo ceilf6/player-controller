@@ -1,62 +1,98 @@
 -- Smart Media Keys Support
--- Controls the last active media player (EVPlayer2 or NeteaseMusic)
+-- Controls the last active media player (EVPlayer2 / NeteaseMusic / bilibili)
 
 -- Track the last active media player
 local lastActiveMediaPlayer = nil
 
--- List of media player apps to track
-local mediaPlayers = {
-    "EVPlayer2",
-    "网易云音乐",  -- NeteaseMusic
-}
+local function normalizeMediaPlayerName(appName, bundleID)
+    if appName == "EVPlayer2" or appName == "EV2Player" then
+        return "EVPlayer2"
+    end
+    if appName == "网易云音乐" or appName == "NeteaseMusic" then
+        return "网易云音乐"
+    end
+    if appName == "bilibili" or appName == "Bilibili" or bundleID == "tv.danmaku.bilianime" then
+        return "bilibili"
+    end
+    return nil
+end
+
+local function getEVPlayerApp()
+    return hs.application.get("EVPlayer2") or hs.application.get("EV2Player")
+end
+
+local function getBilibiliApp()
+    local bilibili = hs.application.get("bilibili") or hs.application.get("Bilibili")
+    if bilibili then
+        return bilibili
+    end
+
+    local apps = hs.application.applicationsForBundleID("tv.danmaku.bilianime")
+    if apps and #apps > 0 then
+        return apps[1]
+    end
+
+    return nil
+end
 
 -- Application watcher to track media player activation
 local appWatcher = hs.application.watcher.new(function(appName, eventType, app)
-    if eventType == hs.application.watcher.activated then
-        print("App activated: [" .. (appName or "nil") .. "]")
-        for _, player in ipairs(mediaPlayers) do
-            if appName == player then
-                lastActiveMediaPlayer = appName
-                print("Media player activated: " .. appName)
-                break
-            end
-        end
+    if eventType ~= hs.application.watcher.activated then
+        return
+    end
+
+    local bundleID = app and app:bundleID() or nil
+    local normalized = normalizeMediaPlayerName(appName, bundleID)
+    if normalized then
+        lastActiveMediaPlayer = normalized
+        print("Media player activated: " .. normalized)
     end
 end)
 appWatcher:start()
 
 -- Control EVPlayer2
 function controlEVPlayer(action)
-    local evplayer = hs.application.get("EVPlayer2")
+    local evplayer = getEVPlayerApp()
     if not evplayer then
         print("  ✗ EVPlayer2 not running")
         return false
     end
 
+    local processName = evplayer:name() or "EVPlayer2"
     if action == "PlayPause" then
         evplayer:activate()
         hs.timer.usleep(200000)
         hs.eventtap.keyStroke({}, "space")
         print("  ✓ EVPlayer2 PlayPause")
     elseif action == "Next" then
-        hs.osascript.applescript([[
+        local ok = hs.osascript.applescript(string.format([[
             tell application "System Events"
-                tell process "EVPlayer2"
+                tell process "%s"
                     click button ">>" of window 1
                 end tell
             end tell
-        ]])
+        ]], processName))
+        if not ok then
+            print("  ✗ EVPlayer2 Next failed")
+            return false
+        end
         print("  ✓ EVPlayer2 Next")
     elseif action == "Previous" then
-        hs.osascript.applescript([[
+        local ok = hs.osascript.applescript(string.format([[
             tell application "System Events"
-                tell process "EVPlayer2"
+                tell process "%s"
                     click button "<<" of window 1
                 end tell
             end tell
-        ]])
+        ]], processName))
+        if not ok then
+            print("  ✗ EVPlayer2 Previous failed")
+            return false
+        end
         print("  ✓ EVPlayer2 Previous")
     end
+
+    lastActiveMediaPlayer = "EVPlayer2"
     return true
 end
 
@@ -70,7 +106,7 @@ function controlNeteaseMusic(action)
 
     if action == "PlayPause" then
         -- 菜单项名称会变化：播放中显示"暂停"，暂停时显示"播放"
-        local ok, result = hs.osascript.applescript([[
+        local ok = hs.osascript.applescript([[
             tell application "System Events"
                 tell process "NeteaseMusic"
                     set menuItem to menu item 1 of menu 1 of menu bar item "控制" of menu bar 1
@@ -78,41 +114,112 @@ function controlNeteaseMusic(action)
                 end tell
             end tell
         ]])
+        if not ok then
+            print("  ✗ 网易云音乐 PlayPause failed")
+            return false
+        end
         print("  ✓ 网易云音乐 PlayPause")
     elseif action == "Next" then
-        hs.osascript.applescript([[
+        local ok = hs.osascript.applescript([[
             tell application "System Events"
                 tell process "NeteaseMusic"
                     click menu item "下一个" of menu 1 of menu bar item "控制" of menu bar 1
                 end tell
             end tell
         ]])
+        if not ok then
+            print("  ✗ 网易云音乐 Next failed")
+            return false
+        end
         print("  ✓ 网易云音乐 Next")
     elseif action == "Previous" then
-        hs.osascript.applescript([[
+        local ok = hs.osascript.applescript([[
             tell application "System Events"
                 tell process "NeteaseMusic"
                     click menu item "上一个" of menu 1 of menu bar item "控制" of menu bar 1
                 end tell
             end tell
         ]])
+        if not ok then
+            print("  ✗ 网易云音乐 Previous failed")
+            return false
+        end
         print("  ✓ 网易云音乐 Previous")
     end
+
+    lastActiveMediaPlayer = "网易云音乐"
+    return true
+end
+
+-- Control bilibili (PlayPause: space, Next/Previous: right/left)
+function controlBilibili(action)
+    local bilibili = getBilibiliApp()
+    if not bilibili then
+        print("  ✗ bilibili not running")
+        return false
+    end
+
+    bilibili:activate()
+    hs.timer.usleep(200000)
+
+    if action == "PlayPause" then
+        hs.eventtap.keyStroke({}, "space")
+        print("  ✓ bilibili PlayPause")
+    elseif action == "Next" then
+        hs.eventtap.keyStroke({}, "right")
+        print("  ✓ bilibili Next (seek forward)")
+    elseif action == "Previous" then
+        hs.eventtap.keyStroke({}, "left")
+        print("  ✓ bilibili Previous (seek backward)")
+    end
+
+    lastActiveMediaPlayer = "bilibili"
     return true
 end
 
 -- Control the last active media player
--- 默认控制 EVPlayer2，只有网易云音乐最后激活且正在运行时才控制它
 function controlMediaPlayer(action)
     print("Action: " .. action .. " | Last player: " .. (lastActiveMediaPlayer or "none"))
 
-    -- 如果网易云音乐是最后激活的且正在运行，控制它
-    if lastActiveMediaPlayer == "网易云音乐" and hs.application.get("网易云音乐") then
-        return controlNeteaseMusic(action)
+    -- 1) 优先控制最近一次激活/操作成功的播放器
+    if lastActiveMediaPlayer == "EVPlayer2" and controlEVPlayer(action) then
+        return true
+    end
+    if lastActiveMediaPlayer == "网易云音乐" and controlNeteaseMusic(action) then
+        return true
+    end
+    if lastActiveMediaPlayer == "bilibili" and controlBilibili(action) then
+        return true
     end
 
-    -- 否则默认控制 EVPlayer2
-    return controlEVPlayer(action)
+    -- 2) 若最近播放器不可用，则尝试当前前台播放器
+    local frontmost = hs.application.frontmostApplication()
+    if frontmost then
+        local normalized = normalizeMediaPlayerName(frontmost:name(), frontmost:bundleID())
+        if normalized == "EVPlayer2" and controlEVPlayer(action) then
+            return true
+        end
+        if normalized == "网易云音乐" and controlNeteaseMusic(action) then
+            return true
+        end
+        if normalized == "bilibili" and controlBilibili(action) then
+            return true
+        end
+    end
+
+    -- 3) 兜底顺序保持旧逻辑优先 EVPlayer2，再网易云，再 bilibili
+    if controlEVPlayer(action) then
+        return true
+    end
+    if controlNeteaseMusic(action) then
+        return true
+    end
+    if controlBilibili(action) then
+        return true
+    end
+
+    print("  ✗ No supported media player is running")
+    return false
 end
 
 -- Media key event tap
